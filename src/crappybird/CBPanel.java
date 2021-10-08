@@ -8,6 +8,7 @@ import javax.swing.JPanel;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
+import java.util.Scanner;
 import java.awt.Font;
 import javax.imageio.*;
 import java.io.*;
@@ -17,41 +18,43 @@ public class CBPanel extends JPanel implements Runnable, MouseListener
 	private int width, height;
 	private Thread thread;
 	private Brid brid;
-	private int pipeNumber;
-	private ArrayList<Pipes> pipesList;
+	private Pipes[] pipesList;
 	private boolean alive;
+	private boolean buttonPressed;
 	private Score sc;
+	private Menu menu;
+	private ScrollingBar bar;
 	private int score;
 	private int bestScore;
+	private int flapCount;
 	private boolean gameStart;
+	private Background background;
 	Image splash;
 	Image death;
-	private Font stringFont; 
+	Image city;
 	public CBPanel(int width, int height)
 	{
 		this.width = width;
 		this.height = height;
 		brid = new Brid(width, height);
+		buttonPressed = false;
+		background = new Background(width, height);
 		score = 0;
+		menu = new Menu();
+		bar = new ScrollingBar(width, height);
+		flapCount = 0;
 		bestScore = 0;
 		sc = new Score();
 		alive = false;
 		gameStart = false;
-		pipesList = new ArrayList<Pipes>();
-		pipeNumber = pipesList.size();
+		pipesList = new Pipes[3];
+		pipesList[0] = new Pipes(width, height);
+		pipesList[1] = new Pipes(3 * width / 2, height);
+		pipesList[2] = new Pipes(2 * width, height);
 		thread = new Thread(this);
 		thread.start();
 		setBackground(Color.cyan);
 		addMouseListener(this);
-		try 
-		{                
-			splash = ImageIO.read(new File("./splash screen.png"));
-			death = ImageIO.read(new File("./death.png"));
-		} 
-		catch (IOException e) 
-		{
-			e.getStackTrace();
-		}
 	}
 	
 	
@@ -76,98 +79,123 @@ public class CBPanel extends JPanel implements Runnable, MouseListener
 	public void paintComponent(Graphics g) 
 	{
 		super.paintComponent(g);
-		//move the ball and then redraw it
+		background.draw(g);
 		if(alive && gameStart)
 		{
 			brid.move();
-			brid.draw(g);
-			pipeNumber = pipesList.size();
-			if (pipeNumber == 0)
+			if(flapCount < 5)
 			{
-				Pipes pipe = new Pipes(width, height);
-				pipesList.add(pipe);
-				pipeNumber = pipesList.size();
+			brid.drawUp(g);
+			flapCount++;
 			}
-			for(int index = 0; index < pipesList.size(); index++)
+			else if(flapCount >= 5 && flapCount < 10)
 			{
-				Pipes pipes = pipesList.get(index);
+				brid.drawDown(g);
+				flapCount++;
+			}
+			else
+			{
+				brid.drawDown(g);
+				flapCount = 0;
+			}
+			for(int index = 0; index < pipesList.length; index++)
+			{
+				Pipes pipes = pipesList[index];
 				pipes.move();
 				pipes.draw(g);
-				if(pipes.getX() == width / 2)
+				if(pipes.getPassed() < 0)
 				{
-					Pipes pipe = new Pipes(width, height);
-					pipesList.add(pipe);
+					pipes.setX(3 * width / 2);
+					pipes.setRectHeight();
 				}
-				else if(pipes.getPassed() < 0)
+				if(brid.getBounds().intersects(pipes.getBoundsTop()) || brid.getBounds().intersects(pipes.getBoundsBottom()) || brid.getY() < 0 || brid.getY() > height - 100)
 				{
-					pipesList.remove(index);
-				}
-				if(brid.getBounds().intersects(pipes.getBoundsTop()) || brid.getBounds().intersects(pipes.getBoundsBottom()) || brid.getY() < 0 || brid.getY() > height)
-				{
-					System.out.println("Collision");
 					alive = false;
-					while(pipesList.size() > 0)
-					{
-						pipesList.remove(0);
-						System.out.println("post collide: " + pipesList.size());
-					}
 				}
 				if(brid.getX() == pipes.getPassed())
 				{
 					score++;
-				}
-				
+				}	
 			}
-			sc.draw(g, score);
+			bar.move();
+			bar.draw(g);
+			sc.draw(g, score, 600, 555, 510, 60);	
 		}
 		else if(!alive && gameStart)
 		{
-			g.drawImage(death, 0, 0, null);
-			Font font = new Font("Verdana", Font.BOLD, 40);
-			g.setFont(font);
-			g.drawString("Score: " + score, 500, 60);
-		if(score >= bestScore)
-		{
-			bestScore = score;				}
-			g.drawString("Best score: " + bestScore, 500, 120);
+			bar.draw(g);
+			if(score > bestScore)
+			{
+				bestScore = score;
+			}
+			sc.drawBest(g, score, bestScore);
+			if(buttonPressed == true)
+			{
+				sc.drawDepressed(g);
+			}
 		}
 		else if(!alive && !gameStart)
 		{
-			g.drawImage(splash, 0, 0, null);
-			brid.draw(g);
-		}
+			menu.draw(g);
+			brid.drawUp(g);
+			bar.draw(g);
+			if(buttonPressed == true)
+			{
+				menu.drawDepressed(g);
+			}	
+		}	
+	}
+	@Override
+	public void mouseClicked(MouseEvent e)
+	{
 		
 	}
-		@Override
-		public void mouseClicked(MouseEvent e)
-		{
-			if(e.getButton() == 1 && alive && gameStart)
-			{
-				brid.flap();
-			}
-			else if(e.getButton() == 1 && !alive && !gameStart)
-			{
-				gameStart = true;
-				alive = true;
-			}
-			else if(e.getButton() == 1 && !alive && gameStart)
-			{
-				alive = true;
-				brid.setY((height) / 2);
-				brid.setVy(0);
-				score = 0;
-			}
-			
-		}
 	@Override
 	public void mousePressed(MouseEvent e)
 	{
-		
+		int xpos = e.getX();
+		int ypos = e.getY();
+		buttonPressed = false;
+		//show indentation of the correct button
+		if(!alive)
+		{
+			if(xpos >= 550 && ypos >=475)
+			{
+				if(xpos <= 650 && ypos <=525)
+				{
+					buttonPressed = true;
+				}
+			}
+		}
 	}
 	@Override
 	public void mouseReleased(MouseEvent e)
 	{
-		
+		int xpos = e.getX();
+		int ypos = e.getY();
+		//check if game has started and if player releases on the correct button)
+		if(e.getButton() == 1 && alive && gameStart)
+		{
+			brid.flap();
+		}
+		else if(e.getButton() == 1 && !alive && !gameStart && buttonPressed)
+		{
+			gameStart = true;
+			alive = true;
+		}
+		if(gameStart && e.getButton() == 1 && !alive && buttonPressed)
+		{
+			for(int i = 0; i < pipesList.length; i++)
+			{
+				pipesList[i].setX((i + 2) * width / 2);
+				pipesList[i].setRectHeight();
+			}
+			bar.resetBar();
+			alive = true;
+			brid.setY((height) / 2);
+			brid.setVy(0);
+			score = 0;
+		}
 	}
 	@Override
 	public void mouseEntered(MouseEvent e)

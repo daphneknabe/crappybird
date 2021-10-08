@@ -1,7 +1,9 @@
 package crappybird;
-import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Rectangle;
+import java.awt.Image;
+import javax.imageio.*;
+import java.io.*;
 
 public class Pipes
 {
@@ -10,9 +12,11 @@ public class Pipes
 	private double g;
 	private double dt;
 	private double vx;
-	private Color color;
 	private int rectHeight;
+	private int imageHeight = 643;
 	private int rectWidth;
+	private Image pipeBottom;
+	private Image pipeTop;
 	public Pipes(int width, int height)
 	{
 		this.width = width;
@@ -21,13 +25,29 @@ public class Pipes
 		y = 0;
 		dt = .1;
 		vx = -40;
-		rectHeight = (int)(Math.random() * 501);
-		rectWidth = 80; 
-		color = Color.green;
+		rectHeight = (int)(Math.random() * 551);
+		rectWidth = 100; 
+		try 
+		{    
+			pipeBottom = ImageIO.read(new File("./pipe bottom.png"));
+			pipeTop = ImageIO.read(new File("./pipe top.png"));
+		} 
+		catch (IOException e) 
+		{
+			e.getStackTrace();
+		}
 	}
 	public int getX()
 	{
 		return x;
+	}
+	public void setX(int x)
+	{
+		this.x = x;
+	}
+	public void setRectHeight()
+	{
+		rectHeight = (int)(Math.random() * 551);
 	}
 	public int getPassed()
 	{
@@ -43,10 +63,11 @@ public class Pipes
 	}
 	public void draw(Graphics g)
 	{
-		g.setColor(color);
-		g.fillRect(x, y, rectWidth, rectHeight);
-		g.fillRect(x, rectHeight + 210, rectWidth, height - 210 - rectHeight);
+		g.drawImage(pipeTop, x - 12, rectHeight - imageHeight, null);
+		g.drawImage(pipeBottom, x - 12, rectHeight + 210, null);
+		
 	}
+	
 	public void move()
 	{
 		x += vx * dt;

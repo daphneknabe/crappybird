@@ -1,7 +1,10 @@
 package crappybird;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.Rectangle;
+import javax.imageio.*;
+import java.io.*;
 
 public class Brid
 {
@@ -12,6 +15,8 @@ public class Brid
 	private double dt;
 	private double vy;
 	private Color color;
+	Image wingsUp;
+	Image wingsDown;
 	private int rectWidth, rectHeight;
 	public Brid(int width, int height)
 	{
@@ -24,15 +29,31 @@ public class Brid
 		x = (width - d)/ 2;
 		y = (height - d) / 2;
 		color = Color.yellow;
+		try 
+		{                
+			wingsUp = ImageIO.read(new File("./froggywingsupfirst.png"));
+			wingsDown = ImageIO.read(new File("./froggywingsdownfirst.png"));
+		} 
+		catch (IOException e) 
+		{
+			e.getStackTrace();
+		}
 	}
-	public void draw(Graphics g)
+	public void drawUp(Graphics g)
 	{
+		/*
 		g.setColor(color);
 		g.fillOval(x, y, d, d);
 		g.setColor(Color.red);
 		g.fillRect(x + 2 * d / 3, y + d / 2, d / 2, d / 4);
 		g.setColor(Color.black);
 		g.fillOval(x + d / 2, y + d / 3, d / 4, d / 4);
+		*/
+		g.drawImage(wingsUp, x, y, null);
+	}
+	public void drawDown(Graphics g)
+	{
+		g.drawImage(wingsDown, x, y, null);
 	}
 	public void move()
 	{
